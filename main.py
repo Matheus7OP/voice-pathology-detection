@@ -9,10 +9,15 @@ import numpy as np
 
 import config
 
-def apply_preemphasis(audio_signal):
+# lembrete importante:
+# Rescaling the data to small values (in general, input values to a neural network should be close 
+# to zero -- typically we expect either data with zero-mean and unit-variance, or data in the [0, 1] range).
+# o keras tem modulo de normalization. talvez seja necessario usar...?
+
+def apply_preemphasis(audio_signal: np.ndarray):
     return librosa.effects.preemphasis(audio_signal, coef=config.PREEMPHASIS_COEFFICIENT)
 
-def extract_features(audio_signal):
+def extract_features(audio_signal: np.ndarray):
     # extracts jitter, shimmer and MFCCs
 
     mfcc = python_speech_features.mfcc(
@@ -31,7 +36,7 @@ def extract_features(audio_signal):
         winfunc=hamming
     )
 
-    snd = parselmouth.Sound(f"{config.DATASET_PATH}/carcinoma_masculino_1.wav")
+    snd = parselmouth.Sound(f"{config.DATASET_PATH}/patologicas/carcinoma_masculino_1.wav")
 
     pitch = snd.to_pitch()
     pulses = parselmouth.praat.call([snd, pitch], "To PointProcess (cc)")
@@ -47,7 +52,7 @@ def extract_features(audio_signal):
 
     return (mfcc, jitter_local, shimmer_local)
 
-def pre_processing(audio_signal):
+def pre_processing(audio_signal: np.ndarray) -> np.ndarray:
     # apply pre emphasis and hamming window function
     processed_signal = apply_preemphasis(audio_signal)
 
@@ -74,8 +79,8 @@ if __name__ == "__main__":
 
     # librosa -> load. keeps default sample rate with sr=None. each value is a sample (amplitude).
 
-    y, _ = librosa.load(f"{config.DATASET_PATH}/carcinoma_masculino_1.wav", sr=None)
-    y2, _ = librosa.load(f"{config.DATASET_PATH}/carcinoma_masculino_1.wav", sr=None)
+    y, _ = librosa.load(f"{config.DATASET_PATH}/patologicas/carcinoma_masculino_1.wav", sr=None)
+    y2, _ = librosa.load(f"{config.DATASET_PATH}/patologicas/carcinoma_masculino_1.wav", sr=None)
     
     extract_features(y)
     pre_processing(y2)
