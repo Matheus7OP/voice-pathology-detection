@@ -36,21 +36,29 @@ def extract_features(audio_signal: np.ndarray):
         winfunc=hamming
     )
 
-    snd = parselmouth.Sound(f"{config.DATASET_PATH}/patologicas/carcinoma_masculino_1.wav")
+    # # windows (len is number of windows extracted. depends on audio size)
+    # print("bg", mfcc)
+    # print(len(mfcc))
 
-    pitch = snd.to_pitch()
-    pulses = parselmouth.praat.call([snd, pitch], "To PointProcess (cc)")
+    # # mfccs for a window (len is NUM_MFCC)
+    # print(mfcc[0])
+    # print(len(mfcc[0]))
 
-    # jitter. (l, r, period floor, period ceiling, maximum period factor)
-    jitter_local = parselmouth.praat.call(pulses, "Get jitter (local)", 0.0, 0.0, 0.0001, 0.02, 1.3)
+    # snd = parselmouth.Sound(f"{config.DATASET_PATH}/pathological/carcinoma_masculino_1.wav")
 
-    # shimmer
-    shimmer_local = parselmouth.praat.call([snd, pulses], "Get shimmer (local)", 0.0, 0.0, 0.0001, 0.02, 1.3, 1.6)
+    # pitch = snd.to_pitch()
+    # pulses = parselmouth.praat.call([snd, pitch], "To PointProcess (cc)")
+
+    # # jitter. (l, r, period floor, period ceiling, maximum period factor)
+    # jitter_local = parselmouth.praat.call(pulses, "Get jitter (local)", 0.0, 0.0, 0.0001, 0.02, 1.3)
+
+    # # shimmer
+    # shimmer_local = parselmouth.praat.call([snd, pulses], "Get shimmer (local)", 0.0, 0.0, 0.0001, 0.02, 1.3, 1.6)
 
     # https://bibliotecadigital.ipb.pt/bitstream/10198/20502/1/pauta-relatorio-43.pdf
     # calculates jitter and shimmer as "absolute" metrics, for the whole audio signal, not its segments
 
-    return (mfcc, jitter_local, shimmer_local)
+    return mfcc # jitter_local, shimmer_local off the table for now
 
 def pre_processing(audio_signal: np.ndarray) -> np.ndarray:
     # apply pre emphasis and hamming window function
@@ -74,15 +82,64 @@ def validate_sample_rate():
     if len(sample_rates) > 1:
         raise Exception("Sample rate is not unique in the dataset.")
 
+def load_dataset():
+    dataset = []
+    results = []
+
+    for (dirpath, _, filenames) in os.walk(config.DATASET_PATH):
+        for f in filenames:
+            out, _ = librosa.load(f"{dirpath}/{f}", sr=None)
+
+            dae = extract_features(out)
+            dataset.append(dae)
+            # pad 274
+
+            if f.find("saudavel") != -1: results.append(0)
+            else: results.append(1)
+
+    # maxi = dataset[0][0]
+    maxsz = 0
+    for i in range(len(dataset)):
+        if len(dataset[maxsz]) < len(dataset[i]): maxsz = i
+        # for e in r:
+        #     for k in e: maxi = max(maxi, abs(k))
+
+    print(len(dataset[maxsz]))
+
+    # workaround: make the shape be the same for all the samples
+    print(dataset[maxsz].shape)
+    print(dataset[0].shape)
+
+    # for e in dataset:
+    #     mymask = [False] * len(e)
+    #     while len(mymask) < len(dataset[maxsz]): mymask.append(True)
+    #     e = np.ma.array(np.resize(e, dataset[maxsz].shape[0]), mask=mymask)
+
+    # normalization
+    # for r in dataset:
+    #     for e in r:
+    #         for coef in e: coef /= maxi
+        
+        # not_done = len(r) < maxsz
+        # while not_done:
+        #     r = np.append(r, [0] * 13)
+        #     print(r, len(r))
+        #     not_done = len(r) < maxsz
+        # print(r, len(r))
+
+    return (np.asarray(dataset).astype(np.float32), np.asarray(results))
+
 if __name__ == "__main__":
     validate_sample_rate()
 
     # librosa -> load. keeps default sample rate with sr=None. each value is a sample (amplitude).
 
-    y, _ = librosa.load(f"{config.DATASET_PATH}/patologicas/carcinoma_masculino_1.wav", sr=None)
-    y2, _ = librosa.load(f"{config.DATASET_PATH}/patologicas/carcinoma_masculino_1.wav", sr=None)
+    y, _ = librosa.load(f"{config.DATASET_PATH}/pathological/carcinoma_masculino_1.wav", sr=None)
+    y2, _ = librosa.load(f"{config.DATASET_PATH}/pathological/carcinoma_masculino_1.wav", sr=None)
     
     extract_features(y)
     pre_processing(y2)
+
+    print(load_dataset())
 
     # still need to know how it works to input the data in the NN

@@ -1,27 +1,47 @@
 from tensorflow import keras
 
-def main():
-    model = keras.Sequential()
+import config
+from main import load_dataset
 
-    model.add(keras.Dense(13, input_dim=8, activation='relu'))
-    model.add(keras.Dense(8, activation='relu'))
-    model.add(keras.Dense(1, activation='sigmoid'))
+inp, out = load_dataset()
+print(type(inp), type(inp))
 
-    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+print(inp.shape)
+print(out.shape)
 
-    # how does the input work? 
-    # I now I'll have like 95 ndarrays (95 windows) of 13 elements each (13 coefficients for each window)
-    # will I run classification on each of the 95 arrays then do something?
-    # or input the whole 95 ndarrays and classify?
+model = keras.Sequential()
+model.add(keras.Input(shape=(None, config.NUM_MFCC)))
 
-    # speaking of https://bibliotecadigital.ipb.pt/bitstream/10198/20502/1/pauta-relatorio-43.pdf
-    # we input the whole 95 ndarrays, but only after we turn them into a single (unidimensional) array.
-    # they use tf.keras.layers.Conv1D instead of sequential?
+model.add(keras.layers.Dense(13, activation='relu'))
+model.add(keras.layers.Dense(8, activation='relu'))
+model.add(keras.layers.Dense(1, activation='sigmoid'))
 
-    # it is important to note that I'll need to do some trial and error to find the best
-    # number of layers and number of neurons. check page 52 of the above link to get some insight.
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
-    # remember to make/do dropout to avoid overfitting (I believe this is stopping the training at certain point)
+[print(i.shape, i.dtype) for i in model.inputs]
+[print(o.shape, o.dtype) for o in model.outputs]
+[print(l.name, l.input_shape, l.dtype) for l in model.layers]
 
-    # something I'll need to do: divide the dataset into training and validation datasets. 
-    # and of course, divide them by result (pathological or not). (done this already)
+model.fit(inp, out, epochs=150, batch_size=10)
+
+loss, accuracy = model.evaluate(inp, out)
+print('Accuracy: %.2f' % (accuracy*100))
+
+#predictions = (model.predict(X) > 0.5).astype(int)
+
+# how does the input work? 
+# I now I'll have like 95 ndarrays (95 windows) of 13 elements each (13 coefficients for each window)
+# will I run classification on each of the 95 arrays then do something?
+# or input the whole 95 ndarrays and classify?
+
+# speaking of https://bibliotecadigital.ipb.pt/bitstream/10198/20502/1/pauta-relatorio-43.pdf
+# we input the whole 95 ndarrays, but only after we turn them into a single (unidimensional) array.
+# they use tf.keras.layers.Conv1D instead of sequential?
+
+# it is important to note that I'll need to do some trial and error to find the best
+# number of layers and number of neurons. check page 52 of the above link to get some insight.
+
+# remember to make/do dropout to avoid overfitting (I believe this is stopping the training at certain point)
+
+# something I'll need to do: divide the dataset into training and validation datasets. training > validation
+# and of course, divide them by result (pathological or not). (done this already) 
