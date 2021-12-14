@@ -1,33 +1,39 @@
+from enum import Flag
 from tensorflow import keras
+from keras.layers import Flatten
 
 import config
 from main import load_dataset
 
 inp, out = load_dataset()
-print(type(inp), type(inp))
 
 print(inp.shape)
 print(out.shape)
 
 model = keras.Sequential()
-model.add(keras.Input(shape=(None, config.NUM_MFCC)))
+model.add(keras.Input(shape=(24, config.NUM_MFCC)))
 
+# first parameter is number of nodes. activation is the activation function
 model.add(keras.layers.Dense(13, activation='relu'))
 model.add(keras.layers.Dense(8, activation='relu'))
 model.add(keras.layers.Dense(1, activation='sigmoid'))
+model.add(Flatten())
 
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
-[print(i.shape, i.dtype) for i in model.inputs]
-[print(o.shape, o.dtype) for o in model.outputs]
-[print(l.name, l.input_shape, l.dtype) for l in model.layers]
+# [print(i.shape, i.dtype) for i in model.inputs]
+# [print(o.shape, o.dtype) for o in model.outputs]
+# [print(l.name, l.input_shape, l.dtype) for l in model.layers]
 
 model.fit(inp, out, epochs=150, batch_size=10)
 
 loss, accuracy = model.evaluate(inp, out)
 print('Accuracy: %.2f' % (accuracy*100))
 
-#predictions = (model.predict(X) > 0.5).astype(int)
+predictions = (model.predict(inp) > 0.5).astype(int)
+# summarize the first 5 cases
+for i in range(5):
+	print('%s => %s (expected %d)' % (inp[i].tolist(), predictions[i], out[i]))
 
 # how does the input work? 
 # I now I'll have like 95 ndarrays (95 windows) of 13 elements each (13 coefficients for each window)

@@ -2,7 +2,6 @@ import os
 
 import librosa
 import python_speech_features
-import parselmouth
 
 from scipy.signal.windows import hamming
 import numpy as np
@@ -90,42 +89,19 @@ def load_dataset():
         for f in filenames:
             out, _ = librosa.load(f"{dirpath}/{f}", sr=None)
 
+            # max: 274, min: 24. what is the null value for mfccs?
             dae = extract_features(out)
+
+            # assuring every input will have the same number of windows
+            dae = np.delete(dae, slice(24, len(dae)), 0)
+
+            assert(len(dae) == 24)
             dataset.append(dae)
-            # pad 274
 
             if f.find("saudavel") != -1: results.append(0)
             else: results.append(1)
 
-    # maxi = dataset[0][0]
-    maxsz = 0
-    for i in range(len(dataset)):
-        if len(dataset[maxsz]) < len(dataset[i]): maxsz = i
-        # for e in r:
-        #     for k in e: maxi = max(maxi, abs(k))
-
-    print(len(dataset[maxsz]))
-
-    # workaround: make the shape be the same for all the samples
-    print(dataset[maxsz].shape)
-    print(dataset[0].shape)
-
-    # for e in dataset:
-    #     mymask = [False] * len(e)
-    #     while len(mymask) < len(dataset[maxsz]): mymask.append(True)
-    #     e = np.ma.array(np.resize(e, dataset[maxsz].shape[0]), mask=mymask)
-
-    # normalization
-    # for r in dataset:
-    #     for e in r:
-    #         for coef in e: coef /= maxi
-        
-        # not_done = len(r) < maxsz
-        # while not_done:
-        #     r = np.append(r, [0] * 13)
-        #     print(r, len(r))
-        #     not_done = len(r) < maxsz
-        # print(r, len(r))
+    #TO-DO: normalize dataset input. values are not in the range [-1, 1] as of now
 
     return (np.asarray(dataset).astype(np.float32), np.asarray(results))
 
