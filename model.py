@@ -1,4 +1,3 @@
-from enum import Flag
 from tensorflow import keras
 from keras.layers import Flatten
 
@@ -11,13 +10,15 @@ print(inp.shape)
 print(out.shape)
 
 model = keras.Sequential()
-model.add(keras.Input(shape=(24, config.NUM_MFCC)))
+model.add(keras.Input(shape=(24*config.NUM_MFCC)))
 
 # first parameter is number of nodes. activation is the activation function
 model.add(keras.layers.Dense(13, activation='relu'))
 model.add(keras.layers.Dense(8, activation='relu'))
 model.add(keras.layers.Dense(1, activation='sigmoid'))
 model.add(Flatten())
+
+model.summary()
 
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 

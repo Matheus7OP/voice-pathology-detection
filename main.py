@@ -81,6 +81,16 @@ def validate_sample_rate():
     if len(sample_rates) > 1:
         raise Exception("Sample rate is not unique in the dataset.")
 
+def normalize_input(dataset):
+    maxi = 0
+    for i in dataset:
+        for j in i: maxi = max(maxi, abs(j))
+
+    for i in range(len(dataset)):
+        for j in range(len(dataset[i])): dataset[i][j] /= maxi
+    
+    #assert(dataset[i][j] <= 1)
+
 def load_dataset():
     dataset = []
     results = []
@@ -90,20 +100,19 @@ def load_dataset():
             out, _ = librosa.load(f"{dirpath}/{f}", sr=None)
 
             # max: 274, min: 24. what is the null value for mfccs?
-            dae = extract_features(out)
+            mfccs = extract_features(out)
 
             # assuring every input will have the same number of windows
-            dae = np.delete(dae, slice(24, len(dae)), 0)
+            mfccs = np.delete(mfccs, slice(24, len(mfccs)), 0)
+            mfccs = mfccs.flatten()
 
-            assert(len(dae) == 24)
-            dataset.append(dae)
+            dataset.append(mfccs)
 
             if f.find("saudavel") != -1: results.append(0)
             else: results.append(1)
 
-    #TO-DO: normalize dataset input. values are not in the range [-1, 1] as of now
-
-    return (np.asarray(dataset).astype(np.float32), np.asarray(results))
+    normalize_input(dataset)
+    return (np.asarray(dataset), np.asarray(results))
 
 if __name__ == "__main__":
     validate_sample_rate()
