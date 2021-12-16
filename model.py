@@ -16,7 +16,6 @@ model.add(keras.Input(shape=(24*config.NUM_MFCC)))
 model.add(keras.layers.Dense(13, activation='relu'))
 model.add(keras.layers.Dense(8, activation='relu'))
 model.add(keras.layers.Dense(1, activation='sigmoid'))
-model.add(Flatten())
 
 model.summary()
 
