@@ -1,3 +1,4 @@
+import numpy
 from tensorflow import keras
 from keras.layers import Flatten
 
@@ -6,8 +7,31 @@ from main import load_dataset
 
 inp, out = load_dataset()
 
-print(inp.shape)
-print(out.shape)
+# print(inp.shape)
+# print(out.shape)
+
+training_in = []
+training_out = []
+
+validation_in = []
+validation_out = []
+
+rnd_permutation = numpy.random.permutation(len(inp))
+
+for i in rnd_permutation[:450]:
+    training_in.append(inp[rnd_permutation[i]])
+    training_out = numpy.append(training_out, out[rnd_permutation[i]])
+
+training_in = numpy.asarray(training_in)
+
+# print(training_in.shape)
+# print(training_out.shape)
+
+for i in rnd_permutation[450:]:
+    validation_in.append(inp[rnd_permutation[i]])
+    validation_out = numpy.append(validation_out, out[rnd_permutation[i]])
+
+validation_in = numpy.asarray(validation_in)
 
 model = keras.Sequential()
 model.add(keras.Input(shape=(24*config.NUM_MFCC)))
@@ -18,22 +42,20 @@ model.add(keras.layers.Dense(8, activation='relu'))
 model.add(keras.layers.Dense(1, activation='sigmoid'))
 
 model.summary()
-
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
 # [print(i.shape, i.dtype) for i in model.inputs]
 # [print(o.shape, o.dtype) for o in model.outputs]
 # [print(l.name, l.input_shape, l.dtype) for l in model.layers]
 
-model.fit(inp, out, epochs=150, batch_size=10)
+model.fit(training_in, training_out, epochs=150, batch_size=10)
 
-loss, accuracy = model.evaluate(inp, out)
+loss, accuracy = model.evaluate(validation_in, validation_out)
 print('Accuracy: %.2f' % (accuracy*100))
 
-predictions = (model.predict(inp) > 0.5).astype(int)
-# summarize the first 5 cases
-for i in range(5):
-	print('%s => %s (expected %d)' % (inp[i].tolist(), predictions[i], out[i]))
+# predictions = (model.predict(validation_in) > 0.5).astype(int)
+# for i in range(5):
+# 	print('%s => %s (expected %d)' % (inp[i].tolist(), predictions[i], validation_out[i]))
 
 # how does the input work? 
 # I now I'll have like 95 ndarrays (95 windows) of 13 elements each (13 coefficients for each window)
