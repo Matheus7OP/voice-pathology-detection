@@ -1,7 +1,6 @@
-import numpy
-from tensorflow import keras
+import numpy as np
+from tensorflow.keras import Sequential, Input, layers
 
-import config
 from main import load_dataset
 
 inp, out = load_dataset()
@@ -15,25 +14,25 @@ training_out = []
 validation_in = []
 validation_out = []
 
-rnd_permutation = numpy.random.permutation(len(inp))
+rnd_permutation = np.random.RandomState(seed=42).permutation(len(inp))
 
 for i in rnd_permutation[:450]:
     training_in.append(inp[rnd_permutation[i]])
-    training_out = numpy.append(training_out, out[rnd_permutation[i]])
+    training_out = np.append(training_out, out[rnd_permutation[i]])
 
-training_in = numpy.asarray(training_in)
+training_in = np.asarray(training_in)
 
 # print(training_in.shape)
 # print(training_out.shape)
 
 for i in rnd_permutation[450:]:
     validation_in.append(inp[rnd_permutation[i]])
-    validation_out = numpy.append(validation_out, out[rnd_permutation[i]])
+    validation_out = np.append(validation_out, out[rnd_permutation[i]])
 
-validation_in = numpy.asarray(validation_in)
+validation_in = np.asarray(validation_in)
 
-model = keras.Sequential()
-model.add(keras.Input(shape=(24*config.NUM_MFCC)))
+model = Sequential()
+model.add(Input(shape=(3562)))
 
 """
 [...] sendo analisados classificadores com 04, 05 e 06 camadas ocultas.
@@ -48,13 +47,16 @@ em análise. Neste trabalho, cada camada oculta dos classificadores é composta
 por 200 neurônios [...]
 """
 
-# first parameter is number of nodes. activation is the activation function
-model.add(keras.layers.Dense(200, activation='relu'))
-model.add(keras.layers.Dense(200, activation='relu'))
-model.add(keras.layers.Dense(200, activation='relu'))
-model.add(keras.layers.Dense(200, activation='relu'))
+model.add(layers.Masking())
 
-model.add(keras.layers.Dense(1, activation='sigmoid'))
+# first parameter is number of nodes. activation is the activation function
+model.add(layers.Dense(200, activation='relu'))
+model.add(layers.Dense(200, activation='relu'))
+model.add(layers.Dense(200, activation='relu'))
+model.add(layers.Dense(200, activation='relu'))
+
+model.add(layers.Dense(1, activation='sigmoid'))
+# model.add(layers.Flatten())
 
 model.summary()
 model.compile(
@@ -62,21 +64,17 @@ model.compile(
     optimizer='adam',
     metrics=['accuracy'])
 
-# [print(i.shape, i.dtype) for i in model.inputs]
-# [print(o.shape, o.dtype) for o in model.outputs]
-# [print(l.name, l.input_shape, l.dtype) for l in model.layers]
-
-model.fit(training_in, training_out, epochs=200, batch_size=10)
+model.fit(training_in, training_out, epochs=100, batch_size=10)
 
 loss, accuracy = model.evaluate(validation_in, validation_out)
 print('Accuracy: %.2f' % (accuracy*100))
 
-# predictions = (model.predict(validation_in) > 0.5).astype(int)
-# for i in range(5):
-#     print('%s => %s (expected %d)' % (
-#         inp[i].tolist(),
-#         predictions[i],
-#         validation_out[i]))
+predictions = (model.predict(validation_in) > 0.5).astype(int)
+for i in range(5):
+    print('%s => %s (expected %d)' % (
+        validation_in[i],
+        predictions[i],
+        validation_out[i]))
 
 """
 how does the input work?

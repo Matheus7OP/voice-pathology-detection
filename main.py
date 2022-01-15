@@ -1,12 +1,24 @@
 import os
 
 import librosa
-from python_speech_features.base import mfcc
-
-from scipy.signal.windows import hamming
 import numpy as np
 
-import config
+from python_speech_features.base import mfcc
+from scipy.signal.windows import hamming
+from tensorflow.keras import preprocessing
+
+from config import (
+    CEPLIFTER,
+    DATASET_PATH,
+    DEFAULT_SAMPLE_RATE,
+    F_MAX,
+    F_MIN,
+    FRAME_LENGTH,
+    HOP_LENGTH,
+    N_MELS,
+    NUM_MFCC,
+    PREEMPHASIS_COEFFICIENT
+)
 
 """
 lembrete importante:
@@ -20,7 +32,7 @@ de normalization. talvez seja necessario usar...?
 def apply_preemphasis(audio_signal: np.ndarray):
     return librosa.effects.preemphasis(
         audio_signal,
-        coef=config.PREEMPHASIS_COEFFICIENT)
+        coef=PREEMPHASIS_COEFFICIENT)
 
 
 def extract_features(audio_signal: np.ndarray):
@@ -28,16 +40,16 @@ def extract_features(audio_signal: np.ndarray):
 
     mfccs = mfcc(
         signal=audio_signal,
-        samplerate=config.DEFAULT_SAMPLE_RATE,
-        winlen=config.FRAME_LENGTH / config.DEFAULT_SAMPLE_RATE,
-        winstep=config.HOP_LENGTH / config.DEFAULT_SAMPLE_RATE,
-        numcep=config.NUM_MFCC,
-        nfilt=config.N_MELS,
-        nfft=config.FRAME_LENGTH,
-        lowfreq=config.F_MIN,
-        highfreq=config.F_MAX,
-        preemph=config.PREEMPHASIS_COEFFICIENT,
-        ceplifter=config.CEPLIFTER,
+        samplerate=DEFAULT_SAMPLE_RATE,
+        winlen=FRAME_LENGTH / DEFAULT_SAMPLE_RATE,
+        winstep=HOP_LENGTH / DEFAULT_SAMPLE_RATE,
+        numcep=NUM_MFCC,
+        nfilt=N_MELS,
+        nfft=FRAME_LENGTH,
+        lowfreq=F_MIN,
+        highfreq=F_MAX,
+        preemph=PREEMPHASIS_COEFFICIENT,
+        ceplifter=CEPLIFTER,
         appendEnergy=True,
         winfunc=hamming
     )
@@ -51,7 +63,7 @@ def extract_features(audio_signal: np.ndarray):
     # print(len(mfcc[0]))
 
     # snd = parselmouth.Sound(
-    #     f"{config.DATASET_PATH}/pathological/carcinoma_masculino_1.wav")
+    #     f"{DATASET_PATH}/pathological/carcinoma_masculino_1.wav")
 
     # pitch = snd.to_pitch()
     # pulses = parselmouth.praat.call([snd, pitch], "To PointProcess (cc)")
@@ -90,10 +102,10 @@ def pre_processing(audio_signal: np.ndarray) -> np.ndarray:
 
     frames = librosa.util.frame(
         processed_signal,
-        frame_length=config.FRAME_LENGTH,
-        hop_length=config.HOP_LENGTH)
+        frame_length=FRAME_LENGTH,
+        hop_length=HOP_LENGTH)
 
-    windowed_frames = np.hamming(config.FRAME_LENGTH).reshape(-1, 1) * frames
+    windowed_frames = np.hamming(FRAME_LENGTH).reshape(-1, 1) * frames
 
     # overlapping frames with window function applied
     return windowed_frames
@@ -103,7 +115,7 @@ def pre_processing(audio_signal: np.ndarray) -> np.ndarray:
 def validate_sample_rate():
     sample_rates = {}
 
-    for (dirpath, _, filenames) in os.walk(config.DATASET_PATH):
+    for (dirpath, _, filenames) in os.walk(DATASET_PATH):
         for f in filenames:
             _, sr = librosa.load(f"{dirpath}/{f}", sr=None)
             sample_rates[sr] = True
@@ -114,6 +126,7 @@ def validate_sample_rate():
 
 def normalize_input(dataset):
     maxi = 0
+
     for i in dataset:
         for j in i:
             maxi = max(maxi, abs(j))
@@ -122,36 +135,38 @@ def normalize_input(dataset):
         for j in range(len(dataset[i])):
             dataset[i][j] /= maxi
 
-    # assert(dataset[i][j] <= 1)
+    return dataset
 
 
 def load_dataset():
     dataset = []
     results = []
 
-    for (dirpath, _, filenames) in os.walk(config.DATASET_PATH):
+    for (dirpath, _, filenames) in os.walk(DATASET_PATH):
         for f in filenames:
             out, _ = librosa.load(f"{dirpath}/{f}", sr=None)
 
-            # max: 274, min: 24. what is the null value for mfccs?
+            # max: 274, min: 24. is there a null value for mfccs? to pad
             mfccs = extract_features(out)
 
             # assuring every input will have the same number of windows
-            mfccs = np.delete(mfccs, slice(24, len(mfccs)), 0)
+            # mfccs = np.delete(mfccs, slice(24, len(mfccs)), 0)
             mfccs = mfccs.flatten()
 
             dataset.append(mfccs)
-
-            # if len(dataset) == 0: dataset = np.copy(mfccs)
-            # else: dataset = np.append(dataset, mfccs, axis=0)
 
             if f.find("saudavel") != -1:
                 results.append(0)
             else:
                 results.append(1)
 
-    # normalize_input(dataset)
-    return (np.asarray(dataset), np.asarray(results))
+    # normalized_dataset = normalize_input(dataset)
+    padded_mfccs = preprocessing.sequence.pad_sequences(
+        dataset,
+        padding="post",
+    )
+
+    return (np.asarray(padded_mfccs), np.asarray(results))
 
 
 if __name__ == "__main__":
@@ -161,11 +176,11 @@ if __name__ == "__main__":
     # a sample (amplitude).
 
     y, _ = librosa.load(
-        f"{config.DATASET_PATH}/pathological/carcinoma_masculino_1.wav",
+        f"{DATASET_PATH}/pathological/carcinoma_masculino_1.wav",
         sr=None)
 
     y2, _ = librosa.load(
-        f"{config.DATASET_PATH}/pathological/carcinoma_masculino_1.wav",
+        f"{DATASET_PATH}/pathological/carcinoma_masculino_1.wav",
         sr=None)
 
     extract_features(y)
