@@ -23,3 +23,5 @@ F_MIN = 0
 F_MAX = None
 N_MELS = 40
 CEPLIFTER = 0
+
+K_VALUE = 5

@@ -146,6 +146,37 @@ def load_dataset():
         for f in filenames:
             out, _ = librosa.load(f"{dirpath}/{f}", sr=None)
 
+            # 1600 x 23 (mini)
+            sample = pre_processing(out)
+
+            # assuring every input will have the same number of windows
+            sample = np.delete(sample, slice(23, len(sample)), 1)
+            sample = sample.flatten()
+
+            dataset.append(sample)
+
+            if f.find("saudavel") != -1:
+                results.append(0)
+            else:
+                results.append(1)
+
+    # normalized_dataset = normalize_input(dataset)
+    # padded_samples = preprocessing.sequence.pad_sequences(
+    #     dataset,
+    #     padding="post",
+    # )
+
+    return (np.asarray(dataset), np.asarray(results))
+
+
+def load_dataset_with_features():
+    dataset = []
+    results = []
+
+    for (dirpath, _, filenames) in os.walk(DATASET_PATH):
+        for f in filenames:
+            out, _ = librosa.load(f"{dirpath}/{f}", sr=None)
+
             # max: 274, min: 24. is there a null value for mfccs? to pad
             mfccs = extract_features(out)
 
@@ -186,6 +217,6 @@ if __name__ == "__main__":
     extract_features(y)
     pre_processing(y2)
 
-    print(load_dataset())
+    print(load_dataset_with_features())
 
     # still need to know how it works to input the data in the NN
