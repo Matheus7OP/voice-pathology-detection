@@ -2,7 +2,7 @@ import numpy as np
 from tensorflow.keras import Sequential, Input, layers
 
 from main import load_dataset_with_features, load_dataset
-from config import K_VALUE
+from config import K_VALUE, MASK_VALUE
 
 """
 Sendo assim, nesta pesquisa, o sinal de voz digitalizado passa a ser fracionado
@@ -19,8 +19,15 @@ inp, out = load_dataset_with_features()
 print(inp.shape)
 print(out.shape)
 
-rnd_permutation = np.random.RandomState(seed=42).permutation(len(inp))
+# seed: 42
+rnd_permutation = np.random.RandomState().permutation(len(inp))
 accuracies = list()
+
+tpcs = list()
+tncs = list()
+
+fpcs = list()
+fncs = list()
 
 for k in range(K_VALUE):
     fold_size = (len(inp) / K_VALUE)
@@ -45,7 +52,7 @@ for k in range(K_VALUE):
     validation_in = np.asarray(validation_in)
 
     model = Sequential()
-    model.add(Input(shape=(3562)))  # 36800 or 3562
+    model.add(Input(shape=(3562)))  # 436800 or 3562
 
     """
     [...] sendo analisados classificadores com 04, 05 e 06 camadas ocultas.
@@ -55,12 +62,12 @@ for k in range(K_VALUE):
 
     Durante as etapas de treino e validação, o sinal de voz é fracionado em
     segmentos estacionários de 16 ms, possuindo no total 400 amostras. A camada
-    de entrada da DNN recebe as 400 amostras (instâncias) referentes ao segmento
-    em análise. Neste trabalho, cada camada oculta dos classificadores é composta
-    por 200 neurônios [...]
+    de entrada da DNN recebe as 400 amostras (instâncias) referentes ao
+    segmento em análise. Neste trabalho, cada camada oculta dos classificadores
+    é composta por 200 neurônios [...]
     """
 
-    model.add(layers.Masking())
+    model.add(layers.Masking(mask_value=MASK_VALUE))
 
     # first parameter is number of nodes. activation is the activation function
     model.add(layers.Dense(20, activation='relu'))
@@ -71,28 +78,64 @@ for k in range(K_VALUE):
     model.add(layers.Dense(1, activation='sigmoid'))
     # model.add(layers.Flatten())
 
-    model.summary()
+    # model.summary()
     model.compile(
         loss='binary_crossentropy',
         optimizer='nadam',
         metrics=['accuracy'])
 
-    model.fit(training_in, training_out, epochs=10, batch_size=10)
+    model.fit(training_in, training_out, epochs=15, batch_size=10)
 
     _, accuracy = model.evaluate(validation_in, validation_out)
     print('Accuracy: %.2f' % (accuracy*100))
     accuracies.append(accuracy)
 
     predictions = (model.predict(validation_in) > 0.5).astype(int)
-    for i in range(5):
-        print('%s => %s (expected %d)' % (
-            validation_in[i],
-            predictions[i],
-            validation_out[i]))
+
+    tpc = 0
+    tnc = 0
+
+    fpc = 0
+    fnc = 0
+
+    for i in range(len(predictions)):
+        if predictions[i] == 0:
+            if predictions[i] == int(validation_out[i]):
+                tnc += 1
+            else:
+                fpc += 1
+        else:
+            if predictions[i] == int(validation_out[i]):
+                tpc += 1
+            else:
+                fnc += 1
+
+    tpcs.append(tpc/float(len(predictions)))
+    tncs.append(tnc/float(len(predictions)))
+
+    fpcs.append(fpc/float(len(predictions)))
+    fncs.append(fnc/float(len(predictions)))
+
+
+mean_tpc = sum(tpcs) / len(tpcs)
+# print(f"TPs: {[(str(round(v*100, 2)) + '%') for v in tpcs]}")
+print(f"Mean true positive: {round(mean_tpc*100, 2)}%")
+
+mean_tnc = sum(tncs) / len(tncs)
+# print(f"TNs: {[(str(round(v*100, 2)) + '%') for v in tncs]}")
+print(f"Mean true negative: {round(mean_tnc*100, 2)}%")
+
+mean_fpc = sum(fpcs) / len(fpcs)
+# print(f"FPs: {[(str(round(v*100, 2)) + '%') for v in fpcs]}")
+print(f"Mean false positive: {round(mean_fpc*100, 2)}%")
+
+mean_fnc = sum(fncs) / len(fncs)
+# print(f"FNs: {[(str(round(v*100, 2)) + '%') for v in fncs]}")
+print(f"Mean false negative: {round(mean_fnc*100, 2)}%")
 
 mean_accuracy = sum(accuracies) / len(accuracies)
 print(f"Accuracies: {[(str(round(v*100, 2)) + '%') for v in accuracies]}")
-print(f"Mean accuracy for cross validation: {round(mean_accuracy*100, 2)}%")
+print(f"Mean accuracy: {round(mean_accuracy*100, 2)}%")
 
 """
 how does the input work?
@@ -111,8 +154,4 @@ to get some insight.
 
 remember to make/do dropout to avoid overfitting (I believe this is stopping
 the training at certain point)
-
-something I'll need to do: divide the dataset into training and validation
-datasets. training > validation and of course, divide them by result
-(pathological or not). (done this already)
 """

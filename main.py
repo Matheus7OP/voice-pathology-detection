@@ -15,6 +15,7 @@ from config import (
     F_MIN,
     FRAME_LENGTH,
     HOP_LENGTH,
+    MASK_VALUE,
     N_MELS,
     NUM_MFCC,
     PREEMPHASIS_COEFFICIENT
@@ -150,9 +151,9 @@ def load_dataset():
             sample = pre_processing(out)
 
             # assuring every input will have the same number of windows
-            sample = np.delete(sample, slice(23, len(sample)), 1)
-            sample = sample.flatten()
+            # sample = np.delete(sample, slice(23, len(sample)), 1)
 
+            sample = sample.flatten()
             dataset.append(sample)
 
             if f.find("saudavel") != -1:
@@ -161,12 +162,16 @@ def load_dataset():
                 results.append(1)
 
     # normalized_dataset = normalize_input(dataset)
-    # padded_samples = preprocessing.sequence.pad_sequences(
-    #     dataset,
-    #     padding="post",
-    # )
+    padded_samples = preprocessing.sequence.pad_sequences(
+        dataset,
+        padding="post",
 
-    return (np.asarray(dataset), np.asarray(results))
+        # default value (zero) seems to be not suitable for this case.
+        # maybe because the zero value is a common normal one
+        value=MASK_VALUE
+    )
+
+    return (np.asarray(padded_samples), np.asarray(results))
 
 
 def load_dataset_with_features():
@@ -177,13 +182,12 @@ def load_dataset_with_features():
         for f in filenames:
             out, _ = librosa.load(f"{dirpath}/{f}", sr=None)
 
-            # max: 274, min: 24. is there a null value for mfccs? to pad
             mfccs = extract_features(out)
 
             # assuring every input will have the same number of windows
             # mfccs = np.delete(mfccs, slice(24, len(mfccs)), 0)
-            mfccs = mfccs.flatten()
 
+            mfccs = mfccs.flatten()
             dataset.append(mfccs)
 
             if f.find("saudavel") != -1:
@@ -195,6 +199,7 @@ def load_dataset_with_features():
     padded_mfccs = preprocessing.sequence.pad_sequences(
         dataset,
         padding="post",
+        value=MASK_VALUE
     )
 
     return (np.asarray(padded_mfccs), np.asarray(results))
