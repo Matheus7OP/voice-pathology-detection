@@ -1,5 +1,5 @@
 DATASET_PATH = "/Users/matheus/workspace/uni/tcc/dataset"
-PREEMPHASIS_COEFFICIENT = 0.95  # ref: vivlian
+PREEMPHASIS_COEFFICIENT = 0.95  # 0.95 ref: vivlian
 
 NUM_MFCC = 13
 N_CLUSTERS = 64
@@ -24,5 +24,8 @@ F_MAX = None
 N_MELS = 40
 CEPLIFTER = 0
 
-K_VALUE = 5
+# k=10 ref: lucas
+K_VALUE = 10
+N_EPOCHS = 40
+
 MASK_VALUE = -1

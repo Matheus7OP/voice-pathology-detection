@@ -4,7 +4,7 @@ import librosa
 import numpy as np
 
 from python_speech_features.base import mfcc
-from scipy.signal.windows import hamming
+from scipy.signal.windows import hamming, hanning
 from tensorflow.keras import preprocessing
 
 from config import (
@@ -37,7 +37,7 @@ def apply_preemphasis(audio_signal: np.ndarray):
 
 
 def extract_features(audio_signal: np.ndarray):
-    # extracts jitter, shimmer and MFCCs
+    # extracts MFCCs
 
     mfccs = mfcc(
         signal=audio_signal,
@@ -52,49 +52,17 @@ def extract_features(audio_signal: np.ndarray):
         preemph=PREEMPHASIS_COEFFICIENT,
         ceplifter=CEPLIFTER,
         appendEnergy=True,
-        winfunc=hamming
+        winfunc=hanning  # TODO: see what's best: hamming or hanning
     )
 
-    # # windows (len is number of windows extracted. depends on audio size)
-    # print("bg", mfcc)
-    # print(len(mfcc))
+    # mfccs = librosa.feature.mfcc(
+    #     y=audio_signal,
+    #     sr=DEFAULT_SAMPLE_RATE,
+    #     n_mfcc=NUM_MFCC,
+    #     hop_length=HOP_LENGTH
+    # )
 
-    # # mfccs for a window (len is NUM_MFCC)
-    # print(mfcc[0])
-    # print(len(mfcc[0]))
-
-    # snd = parselmouth.Sound(
-    #     f"{DATASET_PATH}/pathological/carcinoma_masculino_1.wav")
-
-    # pitch = snd.to_pitch()
-    # pulses = parselmouth.praat.call([snd, pitch], "To PointProcess (cc)")
-
-    # # jitter. (l, r, period floor, period ceiling, maximum period factor)
-    # jitter_local = parselmouth.praat.call(
-    #     pulses,
-    #     "Get jitter (local)",
-    #     0.0,
-    #     0.0,
-    #     0.0001,
-    #     0.02,
-    #     1.3)
-
-    # shimmer
-    # shimmer_local = parselmouth.praat.call(
-    #     [snd, pulses],
-    #     "Get shimmer (local)",
-    #     0.0,
-    #     0.0,
-    #     0.0001,
-    #     0.02,
-    #     1.3,
-    #     1.6)
-
-    # https://bibliotecadigital.ipb.pt/bitstream/10198/20502/1/pauta-relatorio-43.pdf
-    # calculates jitter and shimmer as "absolute" metrics, for the whole audio
-    # signal, not its segments
-
-    return mfccs  # jitter_local, shimmer_local off the table for now
+    return mfccs
 
 
 def pre_processing(audio_signal: np.ndarray) -> np.ndarray:

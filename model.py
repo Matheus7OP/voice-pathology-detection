@@ -2,7 +2,7 @@ import numpy as np
 from tensorflow.keras import Sequential, Input, layers
 
 from main import load_dataset_with_features, load_dataset
-from config import K_VALUE, MASK_VALUE
+from config import K_VALUE, MASK_VALUE, N_EPOCHS
 
 """
 Sendo assim, nesta pesquisa, o sinal de voz digitalizado passa a ser fracionado
@@ -13,8 +13,8 @@ classificação dos segmentos realiza-se a computação da classe predominante a
 fim de definir em qual categoria o sinal de voz como um todo será classificado.
 """
 
-inp, out = load_dataset_with_features()
-# inp, out = load_dataset()
+# inp, out = load_dataset_with_features()
+inp, out = load_dataset()
 
 print(inp.shape)
 print(out.shape)
@@ -52,7 +52,7 @@ for k in range(K_VALUE):
     validation_in = np.asarray(validation_in)
 
     model = Sequential()
-    model.add(Input(shape=(3562)))  # 436800 or 3562
+    model.add(Input(shape=(len(training_in[0]), )))  # 436800 or 3562
 
     """
     [...] sendo analisados classificadores com 04, 05 e 06 camadas ocultas.
@@ -70,10 +70,10 @@ for k in range(K_VALUE):
     model.add(layers.Masking(mask_value=MASK_VALUE))
 
     # first parameter is number of nodes. activation is the activation function
-    model.add(layers.Dense(20, activation='relu'))
-    # model.add(layers.Dense(200, activation='relu'))
-    # model.add(layers.Dense(200, activation='relu'))
-    # model.add(layers.Dense(200, activation='relu'))
+    model.add(layers.Dense(200, activation='relu'))
+    model.add(layers.Dense(200, activation='relu'))
+    model.add(layers.Dense(200, activation='relu'))
+    model.add(layers.Dense(200, activation='relu'))
 
     model.add(layers.Dense(1, activation='sigmoid'))
     # model.add(layers.Flatten())
@@ -84,7 +84,7 @@ for k in range(K_VALUE):
         optimizer='nadam',
         metrics=['accuracy'])
 
-    model.fit(training_in, training_out, epochs=15, batch_size=10)
+    model.fit(training_in, training_out, epochs=N_EPOCHS, batch_size=10)
 
     _, accuracy = model.evaluate(validation_in, validation_out)
     print('Accuracy: %.2f' % (accuracy*100))
