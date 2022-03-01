@@ -4,7 +4,7 @@ import librosa
 import numpy as np
 
 from python_speech_features.base import mfcc
-from scipy.signal.windows import hamming, hanning
+from scipy.signal.windows import hamming
 from tensorflow.keras import preprocessing
 
 from config import (
@@ -21,22 +21,15 @@ from config import (
     PREEMPHASIS_COEFFICIENT
 )
 
-"""
-lembrete importante:
-Rescaling the data to small values (in general, input values to a neural
-network should be close to zero -- typically we expect either data with
-zero-mean and unit-variance, or data in the [0, 1] range). o keras tem modulo
-de normalization. talvez seja necessario usar...?
-"""
-
 
 def apply_preemphasis(audio_signal: np.ndarray):
+    # applies librosa's preemphasis with the coefficient defined on config
     return librosa.effects.preemphasis(
         audio_signal,
         coef=PREEMPHASIS_COEFFICIENT)
 
 
-def extract_features(audio_signal: np.ndarray):
+def extract_features(audio_signal: np.ndarray, full_path: str):
     # extracts MFCCs
 
     mfccs = mfcc(
@@ -52,17 +45,10 @@ def extract_features(audio_signal: np.ndarray):
         preemph=PREEMPHASIS_COEFFICIENT,
         ceplifter=CEPLIFTER,
         appendEnergy=True,
-        winfunc=hanning  # TODO: see what's best: hamming or hanning
+        winfunc=hamming
     )
 
-    # mfccs = librosa.feature.mfcc(
-    #     y=audio_signal,
-    #     sr=DEFAULT_SAMPLE_RATE,
-    #     n_mfcc=NUM_MFCC,
-    #     hop_length=HOP_LENGTH
-    # )
-
-    return mfccs
+    return mfccs.flatten()
 
 
 def pre_processing(audio_signal: np.ndarray) -> np.ndarray:
@@ -77,11 +63,11 @@ def pre_processing(audio_signal: np.ndarray) -> np.ndarray:
     windowed_frames = np.hamming(FRAME_LENGTH).reshape(-1, 1) * frames
 
     # overlapping frames with window function applied
-    return windowed_frames
+    return windowed_frames.flatten()
 
 
-# validates whether the sample rate across all the dataset is unique
 def validate_sample_rate():
+    # validates whether the sample rate across all the dataset is unique
     sample_rates = {}
 
     for (dirpath, _, filenames) in os.walk(DATASET_PATH):
@@ -93,35 +79,16 @@ def validate_sample_rate():
         raise Exception("Sample rate is not unique in the dataset.")
 
 
-def normalize_input(dataset):
-    maxi = 0
-
-    for i in dataset:
-        for j in i:
-            maxi = max(maxi, abs(j))
-
-    for i in range(len(dataset)):
-        for j in range(len(dataset[i])):
-            dataset[i][j] /= maxi
-
-    return dataset
-
-
 def load_dataset():
     dataset = []
     results = []
 
     for (dirpath, _, filenames) in os.walk(DATASET_PATH):
         for f in filenames:
-            out, _ = librosa.load(f"{dirpath}/{f}", sr=None)
+            full_path = f"{dirpath}/{f}"
+            out, _ = librosa.load(full_path, sr=None)
 
-            # 1600 x 23 (mini)
             sample = pre_processing(out)
-
-            # assuring every input will have the same number of windows
-            # sample = np.delete(sample, slice(23, len(sample)), 1)
-
-            sample = sample.flatten()
             dataset.append(sample)
 
             if f.find("saudavel") != -1:
@@ -129,14 +96,10 @@ def load_dataset():
             else:
                 results.append(1)
 
-    # normalized_dataset = normalize_input(dataset)
     padded_samples = preprocessing.sequence.pad_sequences(
         dataset,
         padding="post",
-
-        # default value (zero) seems to be not suitable for this case.
-        # maybe because the zero value is a common normal one
-        value=MASK_VALUE
+        value=MASK_VALUE  # default value (zero) seems unsuitable in this case
     )
 
     return (np.asarray(padded_samples), np.asarray(results))
@@ -148,14 +111,12 @@ def load_dataset_with_features():
 
     for (dirpath, _, filenames) in os.walk(DATASET_PATH):
         for f in filenames:
-            out, _ = librosa.load(f"{dirpath}/{f}", sr=None)
+            full_path = f"{dirpath}/{f}"
 
-            mfccs = extract_features(out)
+            # default sr with sr=None. each value is a sample (amplitude)
+            out, _ = librosa.load(full_path, sr=None)
 
-            # assuring every input will have the same number of windows
-            # mfccs = np.delete(mfccs, slice(24, len(mfccs)), 0)
-
-            mfccs = mfccs.flatten()
+            mfccs = extract_features(out, full_path)
             dataset.append(mfccs)
 
             if f.find("saudavel") != -1:
@@ -163,7 +124,6 @@ def load_dataset_with_features():
             else:
                 results.append(1)
 
-    # normalized_dataset = normalize_input(dataset)
     padded_mfccs = preprocessing.sequence.pad_sequences(
         dataset,
         padding="post",
@@ -171,25 +131,3 @@ def load_dataset_with_features():
     )
 
     return (np.asarray(padded_mfccs), np.asarray(results))
-
-
-if __name__ == "__main__":
-    validate_sample_rate()
-
-    # librosa -> load. keeps default sample rate with sr=None. each value is
-    # a sample (amplitude).
-
-    y, _ = librosa.load(
-        f"{DATASET_PATH}/pathological/carcinoma_masculino_1.wav",
-        sr=None)
-
-    y2, _ = librosa.load(
-        f"{DATASET_PATH}/pathological/carcinoma_masculino_1.wav",
-        sr=None)
-
-    extract_features(y)
-    pre_processing(y2)
-
-    print(load_dataset_with_features())
-
-    # still need to know how it works to input the data in the NN
