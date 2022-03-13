@@ -1,7 +1,7 @@
 import numpy as np
 from tensorflow.keras import Sequential, Input, layers
 
-from main import load_dataset_with_features, load_dataset
+from main import load_dataset_with_features
 from config import K_VALUE, MASK_VALUE, N_EPOCHS
 
 inp, out = load_dataset_with_features()
@@ -19,6 +19,7 @@ tncs = list()
 fpcs = list()
 fncs = list()
 
+# cross-validation
 for k in range(K_VALUE):
     fold_size = (len(inp) / K_VALUE)
     training_fold_bg = fold_size * k
@@ -47,14 +48,13 @@ for k in range(K_VALUE):
     model.add(layers.Masking(mask_value=MASK_VALUE))
 
     # 1st parameter is the number of nodes. 2nd is the activation function
-    model.add(layers.Dense(200, activation='relu'))
-    model.add(layers.Dense(200, activation='relu'))
-    model.add(layers.Dense(200, activation='relu'))
-    model.add(layers.Dense(200, activation='relu'))
+    model.add(layers.Dense(50, activation='relu'))
 
     model.add(layers.Dense(1, activation='sigmoid'))
 
+    # debug
     # model.summary()
+
     model.compile(
         loss='binary_crossentropy',
         optimizer='nadam',
@@ -68,12 +68,10 @@ for k in range(K_VALUE):
 
     predictions = (model.predict(validation_in) > 0.5).astype(int)
 
-    tpc = 0
-    tnc = 0
+    tpc, tnc = 0, 0
+    fpc, fnc = 0, 0
 
-    fpc = 0
-    fnc = 0
-
+    # calculating true/false positive/negative metrics
     for i in range(len(predictions)):
         if predictions[i] == 0:
             if predictions[i] == int(validation_out[i]):
@@ -94,20 +92,20 @@ for k in range(K_VALUE):
 
 
 mean_tpc = sum(tpcs) / len(tpcs)
-# print(f"TPs: {[(str(round(v*100, 2)) + '%') for v in tpcs]}")
 print(f"Mean true positive: {round(mean_tpc*100, 2)}%")
+# print(f"TPs: {[(str(round(v*100, 2)) + '%') for v in tpcs]}")
 
 mean_tnc = sum(tncs) / len(tncs)
-# print(f"TNs: {[(str(round(v*100, 2)) + '%') for v in tncs]}")
 print(f"Mean true negative: {round(mean_tnc*100, 2)}%")
+# print(f"TNs: {[(str(round(v*100, 2)) + '%') for v in tncs]}")
 
 mean_fpc = sum(fpcs) / len(fpcs)
-# print(f"FPs: {[(str(round(v*100, 2)) + '%') for v in fpcs]}")
 print(f"Mean false positive: {round(mean_fpc*100, 2)}%")
+# print(f"FPs: {[(str(round(v*100, 2)) + '%') for v in fpcs]}")
 
 mean_fnc = sum(fncs) / len(fncs)
-# print(f"FNs: {[(str(round(v*100, 2)) + '%') for v in fncs]}")
 print(f"Mean false negative: {round(mean_fnc*100, 2)}%")
+# print(f"FNs: {[(str(round(v*100, 2)) + '%') for v in fncs]}")
 
 mean_accuracy = sum(accuracies) / len(accuracies)
 print(f"Accuracies: {[(str(round(v*100, 2)) + '%') for v in accuracies]}")

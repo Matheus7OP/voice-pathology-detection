@@ -1,4 +1,4 @@
-DATASET_PATH = "/Users/matheus/workspace/uni/tcc/dataset"
+DATASET_PATH = "path/to/dataset"
 PREEMPHASIS_COEFFICIENT = 0.95  # 0.95 ref: vivlian
 
 NUM_MFCC = 13
@@ -14,7 +14,7 @@ n_samples_on_window = int(0.032 * DEFAULT_SAMPLE_RATE)
 # extracting MFCCs)
 FRAME_LENGTH = n_samples_on_window
 
-# overlapping of 50% = 20ms / 2 = 10ms
+# 50% overlap = 20ms / 2 = 10ms
 n_samples_on_overlap = int(n_samples_on_window / 2)
 
 HOP_LENGTH = n_samples_on_overlap
@@ -26,6 +26,6 @@ CEPLIFTER = 0
 
 # k=10 ref: lucas
 K_VALUE = 10
-N_EPOCHS = 40
 
+N_EPOCHS = 40
 MASK_VALUE = -1

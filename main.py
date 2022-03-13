@@ -30,8 +30,7 @@ def apply_preemphasis(audio_signal: np.ndarray):
 
 
 def extract_features(audio_signal: np.ndarray, full_path: str):
-    # extracts MFCCs
-
+    # extracts MFCCs from audio signal
     mfccs = mfcc(
         signal=audio_signal,
         samplerate=DEFAULT_SAMPLE_RATE,
